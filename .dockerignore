@@ -1,0 +1,10 @@
+.git/
+
+.github/
+.vscode/
+
+.gitignore
+.dockerignore
+*.md
+
+test/

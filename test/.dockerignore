@@ -5,6 +5,7 @@
 
 docker-compose.yaml
 passwd
+prepare.sh
 
 config/
 config2/

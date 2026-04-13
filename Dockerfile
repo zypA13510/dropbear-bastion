@@ -5,8 +5,6 @@ ARG USER=bastion
 ARG GROUP=bastion
 ARG UID=102222
 ARG GID=102222
-# no privileges required
-ENV PORT=2222
 
 RUN set -x \
 	&& addgroup -S -g ${GID} ${GROUP} \
@@ -21,9 +19,10 @@ COPY LICENSE /usr/local/share/${NAME}/
 
 USER ${UID}:${GID}
 
-EXPOSE ${PORT}/tcp
+# no privileges required
+EXPOSE 2222/tcp
 
 VOLUME /etc/dropbear
 
 ENTRYPOINT ["dropbear"]
-CMD ["-EFRsw", "-p", "${PORT}", "-D", "/etc/dropbear", "-c", "/bin/false"]
+CMD ["-EFRsw", "-p", "2222", "-D", "/etc/dropbear", "-c", "/bin/false"]

@@ -47,7 +47,7 @@ echo "Actual: ${ACTUAL}"
 
 echo "====="
 echo "Should support hardening"
-ACTUAL=$(run_ssh_test "-L 8080:app:5678 bastion@bastion-hardened -p 2222" "curl http://localhost:8080")
+ACTUAL=$(run_ssh_test "ssh -L 8080:app:5678 bastion@bastion-hardened -p 2222" "curl http://localhost:8080")
 echo "Expect: ${EXPECT}"
 echo "Actual: ${ACTUAL}"
 [ "${ACTUAL}" = "${EXPECT}" ]

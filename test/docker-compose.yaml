@@ -1,0 +1,47 @@
+services:
+  app:
+    image: hashicorp/http-echo
+    command: [ "-text=hello" ]
+    networks:
+      private:
+    expose:
+      - 5678
+  
+  bastion-ootb:
+    build: ../ # image: zypa13510/dropbear-bastion
+    networks:
+      private:
+      public:
+    volumes:
+      - ./config:/etc/dropbear
+  
+  bastion-hardened:
+    build: ../ # image: zypa13510/dropbear-bastion
+    networks:
+      private:
+      public:
+    volumes:
+      - ./passwd:/etc/passwd:ro
+      - ./config2:/etc/dropbear:ro
+    tmpfs:
+      - /run:uid=12345,gid=12345
+    read_only: true
+    user: 12345:12345
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+  
+  test-runner:
+    build: ./
+    networks:
+      public:
+    depends_on:
+      - app
+      - bastion-ootb
+      - bastion-hardened
+
+networks:
+  public:
+  private:
+    internal: true

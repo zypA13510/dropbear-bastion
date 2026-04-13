@@ -45,6 +45,7 @@ jobs:
           compose-file: test/docker-compose.yaml
           up-flags: --build --exit-code-from test-runner
           down-flags: --volumes
+          services-log-level: info
       
       - name: Install cosign
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))

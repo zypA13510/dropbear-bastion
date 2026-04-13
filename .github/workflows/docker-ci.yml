@@ -37,7 +37,7 @@ jobs:
       - name: Run tests
         uses: hoverkraft-tech/compose-action@v2
         with:
-          compose-file: ./test/docker-compose.yml
+          compose-file: ./test/docker-compose.yaml
           up-flags: --build --exit-code-from test-runner
           down-flags: --volumes
       

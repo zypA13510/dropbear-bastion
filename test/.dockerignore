@@ -1,0 +1,10 @@
+.vscode/
+
+.gitignore
+.dockerignore
+
+docker-compose.yaml
+passwd
+
+config/
+config2/

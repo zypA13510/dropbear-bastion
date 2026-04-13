@@ -8,7 +8,7 @@ ARG GID=102222
 
 RUN set -x \
 	&& addgroup -S -g ${GID} ${GROUP} \
-	&& adduser -S -D -H -u ${UID} -s /bin/sh -G ${GROUP} -g "dropbear-bastion service" ${USER} \
+	&& adduser -S -D -H -h / -u ${UID} -s /bin/sh -G ${GROUP} -g "dropbear-bastion service" ${USER} \
 	&& apk add --no-cache \
 		dropbear \
 # for license compliance

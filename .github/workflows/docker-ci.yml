@@ -34,10 +34,14 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       
+      - name: Prepare tests
+        run: sudo ./prepare.sh
+        working-directory: test/
+      
       - name: Run tests
         uses: hoverkraft-tech/compose-action@v2
         with:
-          compose-file: ./test/docker-compose.yaml
+          compose-file: test/docker-compose.yaml
           up-flags: --build --exit-code-from test-runner
           down-flags: --volumes
       

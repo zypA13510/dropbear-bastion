@@ -1,0 +1,104 @@
+name: Docker CI
+
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: RegEx check if tag is release
+        id: check_tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          if [[ "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "type=release" >> $GITHUB_OUTPUT
+          else
+            echo "type=other" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      
+      - name: Prepare tests
+        # `sudo` because we need chown, and `sh` because the script is missing executable permission
+        run: sudo sh ./prepare.sh
+        working-directory: test/
+      
+      - name: Run tests
+        uses: hoverkraft-tech/compose-action@v2
+        with:
+          compose-file: test/docker-compose.yaml
+          up-flags: --build --exit-code-from test-runner
+          down-flags: --volumes
+          services-log-level: info
+      
+      - name: Install cosign
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        uses: sigstore/cosign-installer@v3
+      
+      - name: Login to Docker Hub
+        # Only push releases to Docker Hub
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && steps.check_tag.outputs.type == 'release'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Login to GitHub Container Registry
+        # Only push image on main branch and tags to GitHub
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          # Only push releases to Docker Hub
+          images: |
+            ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') && steps.check_tag.outputs.type == 'release' && 'docker.io/zypa13510/dropbear-bastion' || '' }}
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=schedule
+            type=semver,pattern={{raw}}
+            type=semver,pattern=v{{major}}.{{minor}}
+            type=semver,pattern=v{{major}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha
+      
+      - name: Build and push Docker image
+        id: build-and-push
+        uses: docker/build-push-action@v7
+        with:
+          platforms: linux/amd64,linux/arm64,linux/riscv64,linux/arm/v7
+          push: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Sign the published Docker image
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
